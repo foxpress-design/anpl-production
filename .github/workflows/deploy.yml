@@ -35,10 +35,8 @@ jobs:
 
       - name: Patch config for production
         run: |
-          # Swap site URL
           sed -i "s|https://staging.anpl.org|https://anpl.org|g" astro.config.mjs
-          # Override the image service to use Sharp instead of Netlify's CDN
-          sed -i "/site:/a\\  image: { service: { entrypoint: 'astro/assets/services/sharp' } }," astro.config.mjs
+          sed -i "s|adapter: netlify(),|adapter: netlify({ imageCDN: false }),|" astro.config.mjs
 
       - name: Build
         run: npx astro build
