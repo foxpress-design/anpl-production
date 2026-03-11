@@ -19,7 +19,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout staging source
-        run: git clone --depth 1 https://github.com/foxpress-design/anpl-staging.git .
+        uses: actions/checkout@v4
+        with:
+          repository: foxpress-design/anpl-staging
+          ref: main
+          token: ${{ secrets.STAGING_PAT }}
 
       - name: Setup Node
         uses: actions/setup-node@v4
