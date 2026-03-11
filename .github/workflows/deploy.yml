@@ -37,9 +37,8 @@ jobs:
         run: |
           # Swap site URL
           sed -i "s|https://staging.anpl.org|https://anpl.org|g" astro.config.mjs
-          # Replace Netlify adapter with passthrough image service (no /.netlify/images)
-          sed -i "s|import netlify from '@astrojs/netlify';|// netlify adapter removed for production|" astro.config.mjs
-          sed -i "s|adapter: netlify(),|image: { service: { entrypoint: 'astro/assets/services/sharp' } },|" astro.config.mjs
+          # Override the image service to use Sharp instead of Netlify's CDN
+          sed -i "/site:/a\\  image: { service: { entrypoint: 'astro/assets/services/sharp' } }," astro.config.mjs
 
       - name: Build
         run: npx astro build
