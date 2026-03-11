@@ -82,11 +82,12 @@ jobs:
 
           AUTHOR_NAME=$(git log -1 --format='%an')
           COMMIT_MSG=$(git log -1 --format='%s')
-          TIMESTAMP=$(date -u '+%B %d, %Y at %H:%M UTC')
+          TIMESTAMP=$(TZ='America/Toronto' date '+%B %d, %Y at %l:%M %p EST')
 
           BODY_JSON=$(python3 -c "
           import json, sys
-          body = '\n'.join([
+          body = '
+'.join([
               'The live site (anpl.org) has been updated.',
               '',
               'Latest staging commit: ' + sys.argv[1],
