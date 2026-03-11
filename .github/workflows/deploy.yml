@@ -33,8 +33,13 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Patch site URL for production
-        run: sed -i "s|https://staging.anpl.org|https://anpl.org|g" astro.config.mjs
+      - name: Patch config for production
+        run: |
+          # Swap site URL
+          sed -i "s|https://staging.anpl.org|https://anpl.org|g" astro.config.mjs
+          # Replace Netlify adapter with passthrough image service (no /.netlify/images)
+          sed -i "s|import netlify from '@astrojs/netlify';|// netlify adapter removed for production|" astro.config.mjs
+          sed -i "s|adapter: netlify(),|image: { service: { entrypoint: 'astro/assets/services/sharp' } },|" astro.config.mjs
 
       - name: Build
         run: npx astro build
