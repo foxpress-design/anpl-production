@@ -82,7 +82,7 @@ jobs:
 
           AUTHOR_NAME=$(git log -1 --format='%an')
           COMMIT_MSG=$(git log -1 --format='%s')
-          TIMESTAMP=$(TZ='America/Toronto' date '+%B %d, %Y at %l:%M %p EST')
+          TIMESTAMP=$(date -u '+%B %d, %Y at %H:%M UTC')
 
           BODY_JSON=$(python3 -c "
           import json, sys
