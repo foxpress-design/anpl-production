@@ -1,0 +1,109 @@
+name: Deploy to GitHub Pages
+
+on:
+  repository_dispatch:
+    types: [deploy]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout staging source
+        uses: actions/checkout@v4
+        with:
+          repository: foxpress-design/anpl-staging
+          ref: main
+          token: ${{ secrets.STAGING_PAT }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Patch config for production
+        run: |
+          sed -i "s|https://staging.anpl.org|https://anpl.org|g" astro.config.mjs
+          sed -i "s|adapter: netlify(),|adapter: netlify({ imageCDN: false }),|" astro.config.mjs
+
+      - name: Build
+        run: npx astro build
+        env:
+          KEYSTATIC_STORAGE_KIND: github
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+  notify:
+    needs: deploy
+    runs-on: ubuntu-latest
+    if: success()
+    steps:
+      - name: Checkout staging source
+        uses: actions/checkout@v4
+        with:
+          repository: foxpress-design/anpl-staging
+          ref: main
+          token: ${{ secrets.STAGING_PAT }}
+
+      - name: Send deploy notification
+        env:
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+        run: |
+          if [ -z "$RESEND_API_KEY" ]; then
+            echo "RESEND_API_KEY not set, skipping notification."
+            exit 0
+          fi
+
+          AUTHOR_NAME=$(git log -1 --format='%an')
+          COMMIT_MSG=$(git log -1 --format='%s')
+          TIMESTAMP=$(date -u '+%B %d, %Y at %H:%M UTC')
+
+          BODY_JSON=$(python3 -c "
+          import json, sys
+          body = '\n'.join([
+              'The live site (anpl.org) has been updated.',
+              '',
+              'Latest staging commit: ' + sys.argv[1],
+              'By: ' + sys.argv[2],
+              'Deployed: ' + sys.argv[3],
+              '',
+              'View the live site: https://anpl.org',
+          ])
+          print(json.dumps(body))
+          " "$COMMIT_MSG" "$AUTHOR_NAME" "$TIMESTAMP")
+
+          curl -s -X POST "https://api.resend.com/emails" \
+            -H "Authorization: Bearer $RESEND_API_KEY" \
+            -H "Content-Type: application/json" \
+            -d "{
+              \"from\": \"ANPL Production <notifications@staging.anpl.org>\",
+              \"to\": [\"philip@foxpress.design\", \"treed@antownship.ca\"],
+              \"subject\": \"Live site updated\",
+              \"text\": $BODY_JSON
+            }"
