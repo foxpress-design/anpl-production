@@ -36,8 +36,6 @@ jobs:
       - name: Patch config for production
         run: |
           sed -i "s|https://staging.anpl.org|https://anpl.org|g" astro.config.mjs
-          sed -i "s|adapter: cloudflare(),||" astro.config.mjs
-          sed -i "/import cloudflare from '@astrojs\/cloudflare'/d" astro.config.mjs
 
       - name: Build
         run: npx astro build
